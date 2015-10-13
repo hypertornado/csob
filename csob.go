@@ -1,42 +1,45 @@
 package csob
 
 import (
-	"bytes"
-	"crypto"
-	"crypto/md5"
-	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha1"
-	"crypto/x509"
-	"encoding/base64"
-	"encoding/json"
-	"encoding/pem"
-	"fmt"
-	"io"
-	"io/ioutil"
 	"net/http"
-	"net/http/httputil"
-	"time"
 )
 
 type CSOB struct {
-	merchantId string
-	key        *rsa.PrivateKey
+	merchantId         string
+	key                *rsa.PrivateKey
+	testingEnvironment bool
+	client             *http.Client
 }
 
-func NewCSOB(merchantId, privateKeyPath string) *CSOB {
-	key := loadKey(privateKeyPath)
-	return &CSOB{
-		merchantId,
-		key,
+func NewCSOBTestingEnvironment(merchantId, privateKeyPath string) (*CSOB, error) {
+	csob, err := NewCSOB(merchantId, privateKeyPath)
+	if err == nil {
+		csob.testingEnvironment = true
 	}
+	return csob, err
+}
+
+func NewCSOB(merchantId, privateKeyPath string) (*CSOB, error) {
+	key, err := loadKey(privateKeyPath)
+	if err != nil {
+		return nil, err
+	}
+	return &CSOB{
+		merchantId:         merchantId,
+		key:                key,
+		testingEnvironment: false,
+		client:             &http.Client{},
+	}, nil
 }
 
 func (c *CSOB) Echo() error {
 	dateStr := timestamp()
-	strToSign := c.merchantId + "|" + dateStr
-	signBytes, err := signData(c.key, strToSign)
-	signature := base64.StdEncoding.EncodeToString(signBytes)
+
+	signature, err := c.sign(c.merchantId, dateStr)
+	if err != nil {
+		return err
+	}
 
 	params := map[string]interface{}{
 		"dttm":       dateStr,
@@ -44,46 +47,19 @@ func (c *CSOB) Echo() error {
 		"merchantId": c.merchantId,
 	}
 
-	url := "https://iapi.iplatebnibrana.csob.cz/api/v1.5/echo/"
-
-	marshaled, err := json.MarshalIndent(params, " ", " ")
-	if err != nil {
-		panic(err)
-	}
-
-	client := &http.Client{}
-
-	req, err := http.NewRequest("POST", url, ioutil.NopCloser(bytes.NewReader(marshaled)))
+	resp, err := c.apiRequest("POST", "/echo", params)
 	if err != nil {
 		return err
 	}
 
-	req.Header.Add("Content-Type", "application/json")
-
-	fmt.Println("REQUEST:")
-	oo, err := httputil.DumpRequest(req, true)
-	if err != nil {
-		panic(err)
+	if resp.StatusCode != 200 {
+		return csobError
 	}
-	fmt.Println(string(oo))
-
-	resp, err := client.Do(req)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println("\nRESPONSE:")
-	out, err := httputil.DumpResponse(resp, true)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println(string(out))
 
 	return nil
 }
 
-func (c *CSOB) Init(price uint, title, desc string) {
+func (c *CSOB) Init(price uint, title, desc string) error {
 	dateStr := timestamp()
 
 	params := map[string]interface{}{
@@ -114,104 +90,21 @@ func (c *CSOB) Init(price uint, title, desc string) {
 
 	signString := c.merchantId + "|1|" + dateStr + "|payment|card|1|CZK|true|https://example.com|POST|a|1|1|a|a|CZ"
 
-	fmt.Println("STRING TO SIGN:\n" + signString + "\n")
-
 	signed, err := signData(c.key, signString)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	params["signature"] = signed
 
-	marshaled, err := json.MarshalIndent(params, " ", " ")
+	resp, err := c.apiRequest("POST", "/payment/init", params)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	client := &http.Client{}
-
-	req, err := http.NewRequest("POST", "https://iapi.iplatebnibrana.csob.cz/api/v1.5/payment/init", ioutil.NopCloser(bytes.NewReader(marshaled)))
-	if err != nil {
-		panic(err)
+	if resp.StatusCode != 200 {
+		return csobError
 	}
 
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Accept", "application/json")
-
-	fmt.Println("REQUEST:")
-	oo, err := httputil.DumpRequest(req, true)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(string(oo))
-
-	resp, err := client.Do(req)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println("\nRESPONSE:")
-	out, err := httputil.DumpResponse(resp, true)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println(string(out))
-
-}
-
-func loadKey(path string) *rsa.PrivateKey {
-	bytes, err := ioutil.ReadFile(path)
-	if err != nil {
-		panic(err)
-	}
-
-	block, _ := pem.Decode(bytes)
-
-	key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-	if err != nil {
-		panic(err)
-	}
-
-	err = key.Validate()
-	if err != nil {
-		panic(err)
-	}
-
-	return key
-
-}
-
-func signData(key *rsa.PrivateKey, data string) ([]byte, error) {
-	return signDataSHA1(key, data)
-
-}
-
-func signDataSHA1(key *rsa.PrivateKey, data string) ([]byte, error) {
-	hash := sha1.New()
-	io.WriteString(hash, data)
-	sum := hash.Sum(nil)
-
-	signed, err := key.Sign(rand.Reader, sum, crypto.SHA1)
-	if err != nil {
-		return []byte{}, err
-	}
-	return signed, nil
-}
-
-func timestamp() string {
-	t := time.Now()
-	return t.Format("20060102150405")
-}
-
-func signDataMD5(key *rsa.PrivateKey, data string) ([]byte, error) {
-	hash := md5.New()
-	io.WriteString(hash, data)
-	sum := hash.Sum(nil)
-
-	signed, err := key.Sign(rand.Reader, sum, crypto.MD5)
-	if err != nil {
-		return []byte{}, err
-	}
-	return signed, nil
+	return nil
 }

@@ -1,15 +1,17 @@
 package csob
 
 import (
-	"encoding/base64"
 	"io/ioutil"
 	"os"
 	"testing"
 )
 
 func TestEcho(t *testing.T) {
-	csob := prepareTest()
-	csob.Echo()
+	csob, _ := prepareTest()
+	err := csob.Echo()
+	if err != nil {
+		t.Error(err)
+	}
 
 }
 
@@ -17,23 +19,27 @@ func TestSignature(t *testing.T) {
 	data := "A1233aBcVn|554822|20151013133307|payment|card|1789600|CZK|true|https://vasobchod.cz/return-gateway|POST|žluťoučký kůň|1|1789600|Lenovo ThinkPad Edge E540|Poštovné|1|0|Doprava PPL|Nákup žluťoučký kůň na vasobchod.cz (Lenovo ThinkPad Edge E540, Doprava PPL)|c29tZS1iYXNlNjQtZW5jb2RlZC1tZXJjaGFudC1kYXRh|CZ"
 	expectedSignature := "tGgxtGCiGqxi6isgNJUk8A02pJQQ/E7aOcafJz/alKYZajD3yiB5bGDS6njVzoNOcwgNlVrhwPhXlzKPGPzg56NhSIE/EvBEqkJF/Y950e8YpJGHzoXuf90HqMlJ0Sq5c8W/jRnWGshf8uVzxd7obMZOdcHXmVOOxkAQyyoIUhsmOEVnfIjy26YT87evIsGSSH263LdScK2JpbDdhOQk2Lfcypil0bXFdnzGaSHaTRbtPovcLxrkFA1r3ey6ntGfphi72kDij+Xr+zZPHuuU3VAQZ/xAIWsFpW8XmQam5YIPOrAqHNgNcv+ojvWtYl35l6FeDlmD/HIzc2AdD6Offg=="
 
-	key := loadKey(testKeyPath() + "/rsa.key")
+	key, err := loadKey(testKeyPath() + "/rsa.key")
+	if err != nil {
+		t.Error(err)
+	}
 	signature, err := signData(key, data)
 	if err != nil {
 		t.Error(err)
 	}
 
-	encodedSignature := base64.StdEncoding.EncodeToString(signature)
-
-	if expectedSignature != encodedSignature {
-		t.Error(encodedSignature)
+	if expectedSignature != signature {
+		t.Error(signature)
 	}
 }
 
 func TestInitPayment(t *testing.T) {
 
-	csob := prepareTest()
-	csob.Init(100, "title", "desc")
+	csob, _ := prepareTest()
+	err := csob.Init(100, "title", "desc")
+	if err != nil {
+		t.Error(err)
+	}
 
 }
 
@@ -41,7 +47,7 @@ func testKeyPath() string {
 	return os.Getenv("HOME") + "/.csob/test_keys"
 }
 
-func prepareTest() *CSOB {
+func prepareTest() (*CSOB, error) {
 
 	keyPath := testKeyPath()
 
@@ -50,5 +56,5 @@ func prepareTest() *CSOB {
 		panic(err)
 	}
 
-	return NewCSOB(string(data), keyPath+"/rsa.key")
+	return NewCSOBTestingEnvironment(string(data), keyPath+"/rsa.key")
 }
