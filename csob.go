@@ -74,6 +74,41 @@ type PaymentResult struct {
 	Signature     string `json:"signature"`
 }
 
+func (c *CSOB) ProcessURL(paymentResult *PaymentResult) (string, error) {
+	dttm := timestamp()
+	signature, err := c.sign(c.baseUrl(), c.merchantId, paymentResult.PayId, dttm)
+	if err != nil {
+		return "", err
+	}
+
+	ret := fmt.Sprintf("%s/payment/process/%s/%s/%s/%s",
+		c.baseUrl(),
+		c.merchantId,
+		paymentResult.PayId,
+		dttm,
+		signature,
+	)
+	return ret, nil
+}
+
+func (c *CSOB) Status(paymentResult *PaymentResult) {
+	dttm := timestamp()
+	signature, err := c.sign(c.baseUrl(), c.merchantId, paymentResult.PayId, dttm)
+	if err != nil {
+		panic(err)
+	}
+
+	ret := fmt.Sprintf("%s/payment/status/%s/%s/%s/%s",
+		c.baseUrl(),
+		c.merchantId,
+		paymentResult.PayId,
+		dttm,
+		signature,
+	)
+	println(ret)
+
+}
+
 /*func (c *CSOB) IsResultValid(paymentResult *PaymentResult) bool {
 	signature, err := c.sign(
 		paymentResult.PayId,

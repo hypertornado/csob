@@ -51,6 +51,13 @@ func TestInitPayment(t *testing.T) {
 		t.Error("error")
 	}
 
+	_, err = csob.ProcessURL(resp)
+	if err != nil {
+		t.Error(err)
+	}
+
+	csob.Status(resp)
+
 }
 
 func testKeyPath() string {
