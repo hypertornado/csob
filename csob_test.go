@@ -36,7 +36,7 @@ func TestSignature(t *testing.T) {
 func TestInitPayment(t *testing.T) {
 
 	csob, _ := prepareTest()
-	err := csob.Init(100, "title", "desc")
+	err := csob.Init("100", "some name", 2, 200, "some description")
 	if err != nil {
 		t.Error(err)
 	}

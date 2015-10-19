@@ -59,13 +59,11 @@ func (c *CSOB) Echo() error {
 	return nil
 }
 
-func (c *CSOB) Init(price uint, title, desc string) error {
-	dateStr := timestamp()
-
+func (c *CSOB) Init(orderNo, name string, quantity, amount uint, description string) error {
 	params := map[string]interface{}{
 		"merchantId":   c.merchantId,
-		"orderNo":      "1",
-		"dttm":         dateStr,
+		"orderNo":      orderNo,
+		"dttm":         timestamp(),
 		"payOperation": "payment",
 		"payMethod":    "card",
 		"totalAmount":  1,
@@ -88,14 +86,29 @@ func (c *CSOB) Init(price uint, title, desc string) error {
 		"signature":    "",
 	}
 
-	signString := c.merchantId + "|1|" + dateStr + "|payment|card|1|CZK|true|https://example.com|POST|a|1|1|a|a|CZ"
-
-	signed, err := signData(c.key, signString)
+	signature, err := c.sign(
+		c.merchantId,
+		params["orderNo"],
+		params["dttm"],
+		"payment",
+		"card",
+		"1",
+		"CZK",
+		"true",
+		"https://example.com",
+		"POST",
+		"a",
+		"1",
+		"1",
+		"a",
+		"a",
+		"CZ",
+	)
 	if err != nil {
 		return err
 	}
 
-	params["signature"] = signed
+	params["signature"] = signature
 
 	resp, err := c.apiRequest("POST", "/payment/init", params)
 	if err != nil {
