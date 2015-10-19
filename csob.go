@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 )
 
 type CSOB struct {
@@ -36,6 +37,30 @@ func NewCSOB(merchantId, privateKeyPath, returnUrl string) (*CSOB, error) {
 		client:             &http.Client{},
 		returnUrl:          returnUrl,
 	}, nil
+}
+
+func (c *CSOB) EchoGet() error {
+	dttm := timestamp()
+	signature, err := c.sign(c.merchantId, dttm)
+	if err != nil {
+		return err
+	}
+
+	url := fmt.Sprintf("/echo/%s/%s/%s",
+		c.merchantId,
+		dttm,
+		url.QueryEscape(signature),
+	)
+	resp, err := c.apiRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != 200 {
+		return csobError
+	}
+
+	return nil
 }
 
 func (c *CSOB) Echo() error {
@@ -76,7 +101,7 @@ type PaymentResult struct {
 
 func (c *CSOB) ProcessURL(paymentResult *PaymentResult) (string, error) {
 	dttm := timestamp()
-	signature, err := c.sign(c.baseUrl(), c.merchantId, paymentResult.PayId, dttm)
+	signature, err := c.sign(c.merchantId, paymentResult.PayId, dttm)
 	if err != nil {
 		return "", err
 	}
@@ -86,14 +111,14 @@ func (c *CSOB) ProcessURL(paymentResult *PaymentResult) (string, error) {
 		c.merchantId,
 		paymentResult.PayId,
 		dttm,
-		signature,
+		url.QueryEscape(signature),
 	)
 	return ret, nil
 }
 
 func (c *CSOB) Status(paymentResult *PaymentResult) {
 	dttm := timestamp()
-	signature, err := c.sign(c.baseUrl(), c.merchantId, paymentResult.PayId, dttm)
+	signature, err := c.sign(c.merchantId, paymentResult.PayId, dttm)
 	if err != nil {
 		panic(err)
 	}
@@ -103,9 +128,9 @@ func (c *CSOB) Status(paymentResult *PaymentResult) {
 		c.merchantId,
 		paymentResult.PayId,
 		dttm,
-		signature,
+		url.QueryEscape(signature),
 	)
-	println(ret)
+	panic(ret)
 
 }
 

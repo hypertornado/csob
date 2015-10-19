@@ -12,7 +12,14 @@ func TestEcho(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+}
 
+func TestEchoGet(t *testing.T) {
+	csob, _ := prepareTest()
+	err := csob.EchoGet()
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestSignature(t *testing.T) {
@@ -38,7 +45,7 @@ func TestInitPayment(t *testing.T) {
 	paymentId := timestamp()[4:]
 
 	csob, _ := prepareTest()
-	resp, err := csob.Init(paymentId, "some name", 2, 200, "some description")
+	resp, err := csob.Init(paymentId, "some name", 2546, 200, "some description")
 	if err != nil {
 		t.Error(err)
 	}
@@ -56,7 +63,11 @@ func TestInitPayment(t *testing.T) {
 		t.Error(err)
 	}
 
-	csob.Status(resp)
+	url, err := csob.ProcessURL(resp)
+	if err != nil {
+		t.Error(err)
+	}
+	println(url)
 
 }
 
