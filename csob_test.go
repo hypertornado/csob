@@ -45,7 +45,7 @@ func TestInitPayment(t *testing.T) {
 	paymentId := timestamp()[4:]
 
 	csob, _ := prepareTest()
-	resp, err := csob.Init(paymentId, "some name", 2546, 200, "some description")
+	resp, err := csob.Init(paymentId, "some name", 2546, 200, "some description", true)
 	if err != nil {
 		t.Error(err)
 	}
@@ -68,6 +68,14 @@ func TestInitPayment(t *testing.T) {
 		t.Error(err)
 	}
 	println(url)
+
+	status, err := csob.Status(resp.PayId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status.ResultMessage != "OK" {
+		t.Error("error")
+	}
 
 }
 

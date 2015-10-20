@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 )
 
 var (
@@ -36,6 +37,29 @@ func (c *CSOB) sign(args ...interface{}) (string, error) {
 	return signData(c.key, ret)
 }
 
+func (c *CSOB) paymentStatusTypeCall(payId string, method, urlFragment string) (*PaymentStatus, error) {
+	dttm := timestamp()
+	signature, err := c.sign(c.merchantId, payId, dttm)
+	if err != nil {
+		return nil, err
+	}
+
+	urlStr := fmt.Sprintf("/%s/%s/%s/%s/%s",
+		urlFragment,
+		url.QueryEscape(c.merchantId),
+		url.QueryEscape(payId),
+		dttm,
+		url.QueryEscape(signature),
+	)
+
+	resp, err := c.apiRequest(method, urlStr, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return parseStatusResponse(resp)
+}
+
 func (c *CSOB) apiRequest(method, urlStr string, data map[string]interface{}) (resp *http.Response, err error) {
 	urlStr = c.baseUrl() + urlStr
 
@@ -54,3 +78,36 @@ func (c *CSOB) apiRequest(method, urlStr string, data map[string]interface{}) (r
 	resp, err = c.client.Do(req)
 	return
 }
+
+func parseStatusResponse(response *http.Response) (*PaymentStatus, error) {
+	if response.StatusCode != 200 {
+		return nil, csobError
+	}
+
+	respBytes, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var paymentStatus PaymentStatus
+	err = json.Unmarshal(respBytes, &paymentStatus)
+	return &paymentStatus, err
+}
+
+/*func (c *CSOB) IsResultValid(paymentResult *PaymentResult) bool {
+	signature, err := c.sign(
+		paymentResult.PayId,
+		paymentResult.Dttm,
+		fmt.Sprintf("%d", paymentResult.ResultCode),
+		paymentResult.ResultMessage,
+	)
+	println(signature)
+	println(paymentResult.Signature)
+	if err != nil {
+		return false
+	}
+	if signature == paymentResult.Signature {
+		return true
+	}
+	return false
+}*/

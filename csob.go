@@ -2,9 +2,7 @@ package csob
 
 import (
 	"crypto/rsa"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 )
@@ -89,7 +87,7 @@ func (c *CSOB) Echo() error {
 	return nil
 }
 
-type PaymentResult struct {
+type PaymentStatus struct {
 	PayId         string `json:"payId"`
 	Dttm          string `json:"dttm"`
 	ResultCode    int    `json:"resultCode"`
@@ -99,9 +97,9 @@ type PaymentResult struct {
 	Signature     string `json:"signature"`
 }
 
-func (c *CSOB) ProcessURL(paymentResult *PaymentResult) (string, error) {
+func (c *CSOB) ProcessURL(paymentStatus *PaymentStatus) (string, error) {
 	dttm := timestamp()
-	signature, err := c.sign(c.merchantId, paymentResult.PayId, dttm)
+	signature, err := c.sign(c.merchantId, paymentStatus.PayId, dttm)
 	if err != nil {
 		return "", err
 	}
@@ -109,57 +107,44 @@ func (c *CSOB) ProcessURL(paymentResult *PaymentResult) (string, error) {
 	ret := fmt.Sprintf("%s/payment/process/%s/%s/%s/%s",
 		c.baseUrl(),
 		c.merchantId,
-		paymentResult.PayId,
+		paymentStatus.PayId,
 		dttm,
 		url.QueryEscape(signature),
 	)
 	return ret, nil
 }
 
-func (c *CSOB) Status(paymentResult *PaymentResult) {
-	dttm := timestamp()
-	signature, err := c.sign(c.merchantId, paymentResult.PayId, dttm)
-	if err != nil {
-		panic(err)
-	}
-
-	ret := fmt.Sprintf("%s/payment/status/%s/%s/%s/%s",
-		c.baseUrl(),
-		c.merchantId,
-		paymentResult.PayId,
-		dttm,
-		url.QueryEscape(signature),
-	)
-	panic(ret)
-
+func (c *CSOB) Status(payId string) (*PaymentStatus, error) {
+	return c.paymentStatusTypeCall(payId, "GET", "payment/status")
 }
 
-/*func (c *CSOB) IsResultValid(paymentResult *PaymentResult) bool {
-	signature, err := c.sign(
-		paymentResult.PayId,
-		paymentResult.Dttm,
-		fmt.Sprintf("%d", paymentResult.ResultCode),
-		paymentResult.ResultMessage,
-	)
-	println(signature)
-	println(paymentResult.Signature)
-	if err != nil {
-		return false
-	}
-	if signature == paymentResult.Signature {
-		return true
-	}
-	return false
+func (c *CSOB) Reverse(payId string) (*PaymentStatus, error) {
+	return c.paymentStatusTypeCall(payId, "PUT", "payment/reverse")
+}
+
+func (c *CSOB) Close(payId string) (*PaymentStatus, error) {
+	return c.paymentStatusTypeCall(payId, "PUT", "payment/close")
+}
+
+func (c *CSOB) Refund(payId string) (*PaymentStatus, error) {
+	return c.paymentStatusTypeCall(payId, "PUT", "payment/refund")
+}
+
+/*type Order struct {
+	OrderNo string
 }*/
 
-func (c *CSOB) Init(orderNo, name string, quantity, amount uint, description string) (*PaymentResult, error) {
+func (c *CSOB) Init(orderNo, name string, quantity, amount uint, description string, closePayment bool) (*PaymentStatus, error) {
 
 	amountStr := fmt.Sprintf("%d", amount)
 	quantityStr := fmt.Sprintf("%d", quantity)
 
 	total := amountStr
 
-	closePayment := "true"
+	closePaymentStr := "true"
+	if closePayment {
+		closePaymentStr = "false"
+	}
 
 	params := map[string]interface{}{
 		"merchantId":   c.merchantId,
@@ -169,7 +154,7 @@ func (c *CSOB) Init(orderNo, name string, quantity, amount uint, description str
 		"payMethod":    "card",
 		"totalAmount":  total,
 		"currency":     "CZK",
-		"closePayment": closePayment,
+		"closePayment": closePaymentStr,
 		"returnUrl":    c.returnUrl,
 		"returnMethod": "POST",
 		"cart": []interface{}{
@@ -195,7 +180,7 @@ func (c *CSOB) Init(orderNo, name string, quantity, amount uint, description str
 		"card",
 		total,
 		"CZK",
-		closePayment,
+		closePaymentStr,
 		c.returnUrl,
 		"POST",
 		name,
@@ -216,16 +201,6 @@ func (c *CSOB) Init(orderNo, name string, quantity, amount uint, description str
 		return nil, err
 	}
 
-	if resp.StatusCode != 200 {
-		return nil, csobError
-	}
+	return parseStatusResponse(resp)
 
-	respBytes, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	var paymentResult PaymentResult
-	err = json.Unmarshal(respBytes, &paymentResult)
-	return &paymentResult, err
 }
