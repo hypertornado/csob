@@ -2,28 +2,22 @@ package csob
 
 import (
 	"crypto/rsa"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 )
 
-type CSOB struct {
-	merchantId         string
-	key                *rsa.PrivateKey
-	testingEnvironment bool
-	client             *http.Client
-	returnUrl          string
-}
-
 func NewCSOBTestingEnvironment(merchantId, privateKeyPath string) (*CSOB, error) {
-	csob, err := NewCSOB(merchantId, privateKeyPath, "http://www.example.com")
+	csob, err := NewCSOB(merchantId, privateKeyPath)
 	if err == nil {
 		csob.testingEnvironment = true
 	}
+	csob.ReturnUrl("GET", "http://www.example.com")
 	return csob, err
 }
 
-func NewCSOB(merchantId, privateKeyPath, returnUrl string) (*CSOB, error) {
+func NewCSOB(merchantId, privateKeyPath string) (*CSOB, error) {
 	key, err := loadKey(privateKeyPath)
 	if err != nil {
 		return nil, err
@@ -33,7 +27,6 @@ func NewCSOB(merchantId, privateKeyPath, returnUrl string) (*CSOB, error) {
 		key:                key,
 		testingEnvironment: false,
 		client:             &http.Client{},
-		returnUrl:          returnUrl,
 	}, nil
 }
 
@@ -130,65 +123,135 @@ func (c *CSOB) Refund(payId string) (*PaymentStatus, error) {
 	return c.paymentStatusTypeCall(payId, "PUT", "payment/refund")
 }
 
-/*type Order struct {
-	OrderNo string
-}*/
+type CSOB struct {
+	merchantId         string
+	key                *rsa.PrivateKey
+	testingEnvironment bool
+	client             *http.Client
+	returnUrl          string
+	returnMethod       string
+}
 
-func (c *CSOB) Init(orderNo, name string, quantity, amount uint, description string, closePayment bool) (*PaymentStatus, error) {
+func (c *CSOB) ReturnUrl(returnMethod, returnUrl string) {
+	c.returnMethod = returnMethod
+	c.returnUrl = returnUrl
+}
 
-	amountStr := fmt.Sprintf("%d", amount)
-	quantityStr := fmt.Sprintf("%d", quantity)
+type orderItem struct {
+	name     string
+	quantity uint
+	amount   uint
+}
+
+type order struct {
+	orderNo      uint
+	name         string
+	description  string
+	quantity     uint
+	amount       uint
+	closePayment bool
+	orderItems   []orderItem
+	payOperation string
+	payMethod    string
+	language     string
+	currency     string
+}
+
+func (c *CSOB) NewOrder(orderNo uint, name, description string) *order {
+	return &order{
+		orderNo:      orderNo,
+		name:         name,
+		description:  description,
+		closePayment: false,
+		orderItems:   []orderItem{},
+		payOperation: "payment",
+		payMethod:    "card",
+		language:     "EN",
+		currency:     "USD",
+	}
+}
+
+func (o *order) Close() {
+	o.closePayment = true
+}
+
+func (o *order) Language(language string) {
+	o.language = language
+}
+
+func (o *order) Currency(currency string) {
+	o.currency = currency
+}
+
+func (o *order) AddItem(name string, quantity, amount uint) {
+	var item = orderItem{
+		name:     name,
+		quantity: quantity,
+		amount:   amount,
+	}
+	o.orderItems = append(o.orderItems, item)
+
+}
+
+func (c *CSOB) Init(order *order) (*PaymentStatus, error) {
+
+	if len(order.orderItems) != 1 {
+		return nil, errors.New("there should be 1 order item")
+	}
+
+	amountStr := fmt.Sprintf("%d", order.orderItems[0].amount)
+	quantityStr := fmt.Sprintf("%d", order.orderItems[0].quantity)
 
 	total := amountStr
 
 	closePaymentStr := "true"
-	if closePayment {
+	if order.closePayment {
 		closePaymentStr = "false"
 	}
 
+	orderNoStr := fmt.Sprintf("%d", order.orderNo)
+
 	params := map[string]interface{}{
 		"merchantId":   c.merchantId,
-		"orderNo":      orderNo,
+		"orderNo":      orderNoStr,
 		"dttm":         timestamp(),
-		"payOperation": "payment",
-		"payMethod":    "card",
+		"payOperation": order.payOperation,
+		"payMethod":    order.payMethod,
 		"totalAmount":  total,
-		"currency":     "CZK",
+		"currency":     order.currency,
 		"closePayment": closePaymentStr,
 		"returnUrl":    c.returnUrl,
-		"returnMethod": "POST",
+		"returnMethod": c.returnMethod,
 		"cart": []interface{}{
 			map[string]interface{}{
-				"name":        name,
-				"quantity":    quantityStr,
-				"amount":      amountStr,
-				"description": description,
+				"name":     order.orderItems[0].name,
+				"quantity": quantityStr,
+				"amount":   amountStr,
 			},
 		},
-		"description":  description,
+		"description":  order.description,
 		"merchantData": nil,
 		"customerId":   nil,
-		"language":     "CZ",
+		"language":     order.language,
 		"signature":    "",
 	}
 
 	signature, err := c.sign(
 		c.merchantId,
-		params["orderNo"],
+		orderNoStr,
 		params["dttm"],
-		"payment",
-		"card",
+		order.payOperation,
+		order.payMethod,
 		total,
-		"CZK",
+		order.currency,
 		closePaymentStr,
 		c.returnUrl,
-		"POST",
-		name,
+		c.returnMethod,
+		order.orderItems[0].name,
 		quantityStr,
 		amountStr,
-		description,
-		description,
-		"CZ",
+		order.description,
+		order.language,
 	)
 	if err != nil {
 		return nil, err

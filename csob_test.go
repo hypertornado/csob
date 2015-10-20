@@ -41,17 +41,19 @@ func TestSignature(t *testing.T) {
 }
 
 func TestInitPayment(t *testing.T) {
-
-	paymentId := timestamp()[4:]
-
 	csob, _ := prepareTest()
-	resp, err := csob.Init(paymentId, "some name", 2546, 200, "some description", true)
+
+	order := csob.NewOrder(1234, "some name", "some description")
+	order.AddItem("item name", 1, 200000)
+	order.Close()
+
+	resp, err := csob.Init(order)
 	if err != nil {
 		t.Error(err)
 	}
 
 	if resp.ResultMessage != "OK" {
-		t.Error("error")
+		t.Error(resp.ResultMessage)
 	}
 
 	if resp.PaymentStatus != 1 {
