@@ -91,8 +91,16 @@ func prepareTest() (*CSOB, error) {
 
 	data, err := ioutil.ReadFile(keyPath + "/merchantId.txt")
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return NewCSOBTestingEnvironment(string(data), keyPath+"/rsa.key")
+	c, err := NewCSOB(string(data), keyPath+"/rsa.key")
+	if err != nil {
+		return nil, err
+	}
+
+	c.ReturnUrl("GET", "http://www.example.com")
+	c.TestingEnvironment()
+	return c, nil
+
 }

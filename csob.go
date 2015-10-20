@@ -8,14 +8,14 @@ import (
 	"net/url"
 )
 
-func NewCSOBTestingEnvironment(merchantId, privateKeyPath string) (*CSOB, error) {
+/*func NewCSOBTestingEnvironment(merchantId, privateKeyPath string) (*CSOB, error) {
 	csob, err := NewCSOB(merchantId, privateKeyPath)
 	if err == nil {
 		csob.testingEnvironment = true
 	}
 	csob.ReturnUrl("GET", "http://www.example.com")
 	return csob, err
-}
+}*/
 
 func NewCSOB(merchantId, privateKeyPath string) (*CSOB, error) {
 	key, err := loadKey(privateKeyPath)
@@ -28,6 +28,10 @@ func NewCSOB(merchantId, privateKeyPath string) (*CSOB, error) {
 		testingEnvironment: false,
 		client:             &http.Client{},
 	}, nil
+}
+
+func (c *CSOB) TestingEnvironment() {
+	c.testingEnvironment = true
 }
 
 func (c *CSOB) EchoGet() error {
