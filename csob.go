@@ -8,6 +8,9 @@ import (
 	"net/url"
 )
 
+//TODO: overit string
+//http://localhost:8585/darkovy-poukaz/zaplacene?payId=4860adcd41654b3&dttm=20151102133207&resultCode=0&resultMessage=OK&paymentStatus=3&signature=tduLxxMIfXGTeBj36Zny5kpnz63ACxT4PDvaZMhSimh%2BGLHtBDMJmMuePbw5U9RzdaCSkmAHY%2B8uvVzgl5xtfgTNlmm1xUTJphWrGkaC4rR1u9hTXKAmZyWuS0hvmq6ej1mh4bzMoGEYYl9420xHGCteVMAO4eU%2FcVrzMZ9f86AaW3RUkPl0%2F6vKuqgwaXQQixLjXNEJrqoDTtzzspKMLIygHFgCMSoCKMR8hSOLE71QYKFS6PckP4IRgV%2FxEFzP7NKEDvzt%2FYGOtgkFauRTlqni%2BxkCZESOpg5Me7lP9tl504O5qS8Lk7%2BTB2%2BOUn8ZOsDPzDvOCjFUmJqorVmxDg%3D%3D
+
 /*func NewCSOBTestingEnvironment(merchantId, privateKeyPath string) (*CSOB, error) {
 	csob, err := NewCSOB(merchantId, privateKeyPath)
 	if err == nil {
@@ -16,6 +19,32 @@ import (
 	csob.ReturnUrl("GET", "http://www.example.com")
 	return csob, err
 }*/
+
+func HumanReadableStatusCzech(id int) string {
+	switch id {
+	case 1:
+		return "Platba založena"
+	case 2:
+		return "Platba probíhá"
+	case 3:
+		return "Platba zrušena"
+	case 4:
+		return "Platba potvrzena"
+	case 5:
+		return "Platba odvolána"
+	case 6:
+		return "Platba zamítnuta"
+	case 7:
+		return "Čekání na zůčtování"
+	case 8:
+		return "Platba zůčtována"
+	case 9:
+		return "Zpracování vrácení"
+	case 10:
+		return "Platba vrácena"
+	}
+	return "Žádný stav"
+}
 
 func NewCSOB(merchantId, privateKeyPath string) (*CSOB, error) {
 	key, err := loadKey(privateKeyPath)
