@@ -144,16 +144,16 @@ func (c *CSOB) Status(payId string) (*PaymentStatus, error) {
 	return c.paymentStatusTypeCall(payId, "GET", "payment/status")
 }
 
-func (c *CSOB) Reverse(payId string) (*PaymentStatus, error) {
-	return c.paymentStatusTypeCall(payId, "PUT", "payment/reverse")
+func (c *CSOB) Close(payId string) error {
+	return c.paymentStatusTypePutCall(payId, "close")
 }
 
-func (c *CSOB) Close(payId string) (*PaymentStatus, error) {
-	return c.paymentStatusTypeCall(payId, "PUT", "payment/close")
+func (c *CSOB) Reverse(payId string) error {
+	return c.paymentStatusTypePutCall(payId, "reverse")
 }
 
-func (c *CSOB) Refund(payId string) (*PaymentStatus, error) {
-	return c.paymentStatusTypeCall(payId, "PUT", "payment/refund")
+func (c *CSOB) Refund(payId string) error {
+	return c.paymentStatusTypePutCall(payId, "refund")
 }
 
 type CSOB struct {

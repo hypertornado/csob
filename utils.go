@@ -60,6 +60,32 @@ func (c *CSOB) paymentStatusTypeCall(payId string, method, urlFragment string) (
 	return parseStatusResponse(resp)
 }
 
+func (c *CSOB) paymentStatusTypePutCall(payId string, urlFragment string) error {
+	data := map[string]interface{}{
+		"merchantId": c.merchantId,
+		"payId":      payId,
+		"dttm":       timestamp(),
+	}
+
+	signature, err := c.sign(data["merchantId"], data["payId"], data["dttm"])
+	if err != nil {
+		return err
+	}
+
+	data["signature"] = signature
+
+	resp, err := c.apiRequest("PUT", "/payment/"+urlFragment, data)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != 200 {
+		return csobError
+	}
+
+	return nil
+}
+
 func (c *CSOB) apiRequest(method, urlStr string, data map[string]interface{}) (resp *http.Response, err error) {
 	urlStr = c.baseUrl() + urlStr
 
@@ -80,6 +106,7 @@ func (c *CSOB) apiRequest(method, urlStr string, data map[string]interface{}) (r
 }
 
 func parseStatusResponse(response *http.Response) (*PaymentStatus, error) {
+
 	if response.StatusCode != 200 {
 		return nil, csobError
 	}
@@ -93,21 +120,3 @@ func parseStatusResponse(response *http.Response) (*PaymentStatus, error) {
 	err = json.Unmarshal(respBytes, &paymentStatus)
 	return &paymentStatus, err
 }
-
-/*func (c *CSOB) IsResultValid(paymentResult *PaymentResult) bool {
-	signature, err := c.sign(
-		paymentResult.PayId,
-		paymentResult.Dttm,
-		fmt.Sprintf("%d", paymentResult.ResultCode),
-		paymentResult.ResultMessage,
-	)
-	println(signature)
-	println(paymentResult.Signature)
-	if err != nil {
-		return false
-	}
-	if signature == paymentResult.Signature {
-		return true
-	}
-	return false
-}*/
