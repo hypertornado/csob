@@ -15,6 +15,7 @@ var (
 	baseUrlTesting = "https://iapi.iplatebnibrana.csob.cz/api/" + version
 	baseUrl        = "https://api.platebnibrana.csob.cz/api/" + version
 	csobError      = errors.New("CSOB connection error")
+	Debug          = false
 )
 
 func (c *CSOB) baseUrl() string {
@@ -94,6 +95,12 @@ func (c *CSOB) apiRequest(method, urlStr string, data map[string]interface{}) (r
 		return
 	}
 
+	if Debug {
+		fmt.Println("-----")
+		fmt.Println(method, " ", urlStr)
+		fmt.Println(string(marshaled))
+	}
+
 	req, err := http.NewRequest(method, urlStr, ioutil.NopCloser(bytes.NewReader(marshaled)))
 	if err != nil {
 		return resp, err
@@ -102,6 +109,15 @@ func (c *CSOB) apiRequest(method, urlStr string, data map[string]interface{}) (r
 	req.Header.Add("Content-Type", "application/json")
 
 	resp, err = c.client.Do(req)
+
+	/*if Debug {
+		data, _ := ioutil.ReadAll(resp.Body)
+		fmt.Println(">>>")
+		fmt.Println(resp.Status)
+		fmt.Println(string(data))
+		fmt.Println("#####")
+	}*/
+
 	return
 }
 
