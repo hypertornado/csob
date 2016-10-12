@@ -122,6 +122,7 @@ func (c *CSOB) apiRequest(method, urlStr string, data map[string]interface{}) (r
 }
 
 func parseStatusResponse(response *http.Response) (*PaymentStatus, error) {
+	defer response.Body.Close()
 
 	if response.StatusCode != 200 {
 		return nil, csobError
