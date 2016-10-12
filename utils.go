@@ -76,6 +76,7 @@ func (c *CSOB) paymentStatusTypePutCall(payId string, urlFragment string) error 
 	data["signature"] = signature
 
 	resp, err := c.apiRequest("PUT", "/payment/"+urlFragment, data)
+	defer resp.Body.Close()
 	if err != nil {
 		return err
 	}
@@ -107,7 +108,6 @@ func (c *CSOB) apiRequest(method, urlStr string, data map[string]interface{}) (r
 	}
 
 	req.Header.Add("Content-Type", "application/json")
-
 	resp, err = c.client.Do(req)
 
 	/*if Debug {
