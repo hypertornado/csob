@@ -65,12 +65,6 @@ func TestInitPayment(t *testing.T) {
 		t.Error(err)
 	}
 
-	url, err := csob.ProcessURL(resp)
-	if err != nil {
-		t.Error(err)
-	}
-	println(url)
-
 	status, err := csob.Status(resp.PayId)
 	if err != nil {
 		t.Fatal(err)
