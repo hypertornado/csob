@@ -34,7 +34,6 @@ func (c *CSOB) sign(args ...interface{}) (string, error) {
 		}
 		ret += fmt.Sprintf("%s", args[i])
 	}
-
 	return signData(c.key, ret)
 }
 

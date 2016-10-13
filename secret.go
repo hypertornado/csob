@@ -44,6 +44,18 @@ func signData(key *rsa.PrivateKey, data string) (string, error) {
 
 }
 
+func decrypt(key *rsa.PrivateKey, ciphertext string) (string, error) {
+	cipherBytes, err := base64.StdEncoding.DecodeString(ciphertext)
+	if err != nil {
+		panic(err)
+	}
+	decrypted, err := key.Decrypt(rand.Reader, cipherBytes, crypto.SHA1.New())
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(decrypted), nil
+}
+
 func signDataSHA1(key *rsa.PrivateKey, data string) ([]byte, error) {
 	hash := sha1.New()
 	io.WriteString(hash, data)

@@ -2,8 +2,10 @@ package csob
 
 import (
 	"crypto/rsa"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 )
@@ -64,6 +66,7 @@ func (c *CSOB) EchoGet() error {
 		url.QueryEscape(signature),
 	)
 	resp, err := c.apiRequest("GET", url, nil)
+	defer resp.Body.Close()
 	if err != nil {
 		return err
 	}
@@ -72,7 +75,27 @@ func (c *CSOB) EchoGet() error {
 		return csobError
 	}
 
+	respBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	var echoResp echoResponse
+	err = json.Unmarshal(respBytes, &echoResp)
+	if err != nil {
+		return err
+	}
+
+	//TODO: check signature
+
 	return nil
+}
+
+type echoResponse struct {
+	Dttm          string `json:"dttm"`
+	ResultCode    int    `json:"resultCode"`
+	ResultMessage string `json:"resultMessage"`
+	Signature     string `json:"signature"`
 }
 
 func (c *CSOB) Echo() error {
@@ -90,6 +113,7 @@ func (c *CSOB) Echo() error {
 	}
 
 	resp, err := c.apiRequest("POST", "/echo", params)
+	defer resp.Body.Close()
 	if err != nil {
 		return err
 	}
