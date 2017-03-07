@@ -92,6 +92,8 @@ func TestInitPayment(t *testing.T) {
 	order.AddItem("item name", 1, 200000)
 	order.Close()
 
+	//csob.EET(123, "cashRegister")
+
 	resp, err := csob.Init(order)
 	if err != nil {
 		t.Error(err)

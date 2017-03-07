@@ -175,6 +175,7 @@ type CSOB struct {
 	client             *http.Client
 	returnUrl          string
 	returnMethod       string
+	eet                *eet
 }
 
 func (c *CSOB) ReturnUrl(returnMethod, returnUrl string) {
@@ -279,6 +280,11 @@ func (c *CSOB) Init(order *order) (*PaymentStatus, error) {
 		"customerId":   nil,
 		"language":     order.language,
 		"signature":    "",
+	}
+	if c.eet != nil {
+		params["extensions"] = []*EETExtension{
+			c.EETExtension(),
+		}
 	}
 
 	signature, err := c.sign(
