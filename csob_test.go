@@ -1,10 +1,30 @@
 package csob
 
 import (
+	"errors"
+	"fmt"
 	"io/ioutil"
+	"math/rand"
+	"net/http"
 	"os"
+	"os/exec"
 	"testing"
+	"time"
 )
+
+func runServer(result chan error) error {
+	http.HandleFunc("/paid", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("paymentStatus") == "4" {
+			result <- nil
+		} else {
+			result <- errors.New("not ok response")
+		}
+		fmt.Fprintf(w, "OK")
+	})
+
+	http.ListenAndServe(":8081", nil)
+	return nil
+}
 
 func TestEcho(t *testing.T) {
 	csob, _ := prepareTest()
@@ -61,10 +81,14 @@ func TestSignature(t *testing.T) {
 	}
 }
 
+//http://localhost:8081/paid?payId=6baae05fce1edCC&dttm=20170307135300&resultCode=0&resultMessage=OK&paymentStatus=4&signature=uFkCys8N3citnKZFrqexUac8Fn1Y5kISDOAnO5luECI77AkFKUdsLZUz%2BIg%2FZcqKbWjmSYCONCYk4CmbDChzFiwkS3YHOuxmk2rs0hQ87f4BjR4jBavo%2Fg82Qx7HHZRpB%2BU17Cl1wpf90N4oilZAbVhaqZyeGz4IFdnQZK5zoGH7Q6LZP%2FAjEhrzI7zEmNraE9mDBrruxtKcyBk76oTikEmtagdiJzswFwGnPpxpegDLSRC9qzI2yHurCmNHTqLkRhQQtlPHILIbylvrFrR1Bst6TYTwgA5HONbAHEkm%2FbrThjw0AneoIUmUD0K3KQyHFFSb87W284RrRZ0%2FpMv6zg%3D%3D&authCode=858466
+
 func TestInitPayment(t *testing.T) {
+	rand.Seed(int64(time.Now().Nanosecond()))
 	csob, _ := prepareTest()
 
-	order := csob.NewOrder(1234, "some name", "some description")
+	rInt := rand.Uint32()
+	order := csob.NewOrder(uint(rInt), "some name", "some description")
 	order.AddItem("item name", 1, 200000)
 	order.Close()
 
@@ -81,9 +105,24 @@ func TestInitPayment(t *testing.T) {
 		t.Error("error")
 	}
 
-	_, err = csob.ProcessURL(resp)
+	path, err := csob.ProcessURL(resp)
 	if err != nil {
 		t.Error(err)
+	}
+
+	resChan := make(chan error)
+
+	go runServer(resChan)
+
+	cmd := exec.Command("open", path)
+	err = cmd.Run()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	res := <-resChan
+	if res != nil {
+		t.Fatal(res)
 	}
 
 	status, err := csob.Status(resp.PayId)
@@ -93,7 +132,6 @@ func TestInitPayment(t *testing.T) {
 	if status.ResultMessage != "OK" {
 		t.Error("error")
 	}
-
 }
 
 func testKeyPath() string {
@@ -101,7 +139,6 @@ func testKeyPath() string {
 }
 
 func prepareTest() (*CSOB, error) {
-
 	keyPath := testKeyPath()
 
 	data, err := ioutil.ReadFile(keyPath + "/merchantId.txt")
@@ -114,7 +151,7 @@ func prepareTest() (*CSOB, error) {
 		return nil, err
 	}
 
-	c.ReturnUrl("GET", "http://www.example.com")
+	c.ReturnUrl("GET", "http://localhost:8081/paid")
 	c.TestingEnvironment()
 	return c, nil
 

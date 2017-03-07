@@ -113,10 +113,10 @@ func (c *CSOB) Echo() error {
 	}
 
 	resp, err := c.apiRequest("POST", "/echo", params)
-	defer resp.Body.Close()
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
 		return csobError
