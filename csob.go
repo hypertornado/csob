@@ -283,7 +283,7 @@ func (c *CSOB) Init(order *order) (*PaymentStatus, error) {
 	}
 	if c.eet != nil {
 		params["extensions"] = []*EETExtension{
-			c.EETExtension(),
+			c.EETExtension(order.orderItems[0].amount),
 		}
 	}
 
@@ -316,5 +316,4 @@ func (c *CSOB) Init(order *order) (*PaymentStatus, error) {
 	}
 
 	return parseStatusResponse(resp)
-
 }

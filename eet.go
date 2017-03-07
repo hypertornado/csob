@@ -1,5 +1,9 @@
 package csob
 
+import (
+	"fmt"
+)
+
 type eet struct {
 	premiseId      int64
 	cashRegisterId string
@@ -25,18 +29,33 @@ type EETExtensionData struct {
 	TotalPrice     float64 `json:"totalPrice"`
 }
 
-func (c *CSOB) EETExtension() *EETExtension {
+func (c *CSOB) EETExtension(totalAmount uint) *EETExtension {
+	var total float64 = float64(totalAmount) / 100
 	ret := &EETExtension{
 		Extension: "eetV3",
 		DTTM:      timestamp(),
 		Data: &EETExtensionData{
 			PremiseId:      c.eet.premiseId,
 			CashRegisterId: c.eet.cashRegisterId,
+			TotalPrice:     total,
 		},
 	}
+	toSign := fmt.Sprintf("%s|%s|%d|%s|%.2f",
+		ret.Extension,
+		ret.DTTM,
+		ret.Data.PremiseId,
+		ret.Data.CashRegisterId,
+		ret.Data.TotalPrice,
+	)
+	//fmt.Println(toSign)
+
+	signature, err := signData(c.key, toSign)
+	if err != nil {
+		panic(err)
+	}
+	//fmt.Println(signature)
+
+	ret.Signature = signature
+
 	return ret
 }
-
-//func (e *eet) GetMap() map[string]interface{} {
-
-//}
