@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	version        = "v1.5"
+	version        = "v1.7"
 	baseUrlTesting = "https://iapi.iplatebnibrana.csob.cz/api/" + version
 	baseUrl        = "https://api.platebnibrana.csob.cz/api/" + version
 	csobError      = errors.New("CSOB connection error")
