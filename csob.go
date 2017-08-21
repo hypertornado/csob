@@ -250,9 +250,9 @@ func (c *CSOB) Init(order *order) (*PaymentStatus, error) {
 
 	total := amountStr
 
-	closePaymentStr := "true"
+	closePaymentStr := "false"
 	if order.closePayment {
-		closePaymentStr = "false"
+		closePaymentStr = "true"
 	}
 
 	orderNoStr := fmt.Sprintf("%d", order.orderNo)
@@ -309,6 +309,9 @@ func (c *CSOB) Init(order *order) (*PaymentStatus, error) {
 	}
 
 	params["signature"] = signature
+
+	marshaled, _ := json.MarshalIndent(params, " ", " ")
+	fmt.Println(string(marshaled))
 
 	resp, err := c.apiRequest("POST", "/payment/init", params)
 	if err != nil {
