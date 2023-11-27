@@ -190,9 +190,9 @@ type orderItem struct {
 }
 
 type order struct {
-	orderNo      uint
-	name         string
-	description  string
+	orderNo uint
+	name    string
+	//description  string
 	quantity     uint
 	amount       uint
 	closePayment bool
@@ -203,11 +203,11 @@ type order struct {
 	currency     string
 }
 
-func (c *CSOB) NewOrder(orderNo uint, name, description string) *order {
+func (c *CSOB) NewOrder(orderNo uint, name /*, description*/ string) *order {
 	return &order{
-		orderNo:      orderNo,
-		name:         name,
-		description:  description,
+		orderNo: orderNo,
+		name:    name,
+		//description:  description,
 		closePayment: false,
 		orderItems:   []orderItem{},
 		payOperation: "payment",
@@ -275,7 +275,7 @@ func (c *CSOB) Init(order *order) (*PaymentStatus, error) {
 				"amount":   amountStr,
 			},
 		},
-		"description":  order.description,
+		//"description":  order.description,
 		"merchantData": nil,
 		"customerId":   nil,
 		"language":     order.language,
@@ -301,7 +301,7 @@ func (c *CSOB) Init(order *order) (*PaymentStatus, error) {
 		order.orderItems[0].name,
 		quantityStr,
 		amountStr,
-		order.description,
+		//order.description,
 		order.language,
 	)
 	if err != nil {

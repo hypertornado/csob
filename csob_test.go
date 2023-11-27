@@ -88,7 +88,7 @@ func TestInitPayment(t *testing.T) {
 	csob, _ := prepareTest()
 
 	rInt := rand.Uint32()
-	order := csob.NewOrder(uint(rInt), "some name", "some description")
+	order := csob.NewOrder(uint(rInt), "some name")
 	order.AddItem("item name", 1, 200000)
 	order.Close()
 

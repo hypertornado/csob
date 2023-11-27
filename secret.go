@@ -4,7 +4,7 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha1"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
@@ -36,7 +36,7 @@ func loadKey(path string) (*rsa.PrivateKey, error) {
 }
 
 func signData(key *rsa.PrivateKey, data string) (string, error) {
-	signBytes, err := signDataSHA1(key, data)
+	signBytes, err := signDataSHA256(key, data)
 	if err != nil {
 		return "", err
 	}
@@ -49,19 +49,19 @@ func decrypt(key *rsa.PrivateKey, ciphertext string) (string, error) {
 	if err != nil {
 		panic(err)
 	}
-	decrypted, err := key.Decrypt(rand.Reader, cipherBytes, crypto.SHA1.New())
+	decrypted, err := key.Decrypt(rand.Reader, cipherBytes, crypto.SHA256.New())
 	if err != nil {
 		return "", err
 	}
 	return base64.StdEncoding.EncodeToString(decrypted), nil
 }
 
-func signDataSHA1(key *rsa.PrivateKey, data string) ([]byte, error) {
-	hash := sha1.New()
+func signDataSHA256(key *rsa.PrivateKey, data string) ([]byte, error) {
+	hash := sha256.New()
 	io.WriteString(hash, data)
 	sum := hash.Sum(nil)
 
-	signed, err := key.Sign(rand.Reader, sum, crypto.SHA1)
+	signed, err := key.Sign(rand.Reader, sum, crypto.SHA256)
 	if err != nil {
 		return []byte{}, err
 	}
