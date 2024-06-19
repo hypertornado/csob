@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -72,7 +73,7 @@ func (c *CSOB) EchoGet() error {
 	}
 
 	if resp.StatusCode != 200 {
-		return csobError
+		return fmt.Errorf("cant' echo, code: %d", resp.StatusCode)
 	}
 
 	respBytes, err := ioutil.ReadAll(resp.Body)
@@ -119,7 +120,10 @@ func (c *CSOB) Echo() error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return csobError
+
+		bodyContent, _ := io.ReadAll(resp.Body)
+
+		return fmt.Errorf("cant' echo POST, code: %d, body: %s", resp.StatusCode, string(bodyContent))
 	}
 
 	return nil
@@ -132,6 +136,7 @@ type PaymentStatus struct {
 	ResultMessage string `json:"resultMessage"`
 	PaymentStatus int    `json:"paymentStatus"`
 	AuthCode      string `json:"authCode"`
+	StatusDetail  string `json:"statusDetail"`
 	Signature     string `json:"signature"`
 }
 
@@ -310,8 +315,8 @@ func (c *CSOB) Init(order *order) (*PaymentStatus, error) {
 
 	params["signature"] = signature
 
-	marshaled, _ := json.MarshalIndent(params, " ", " ")
-	fmt.Println(string(marshaled))
+	//marshaled, _ := json.MarshalIndent(params, " ", " ")
+	//fmt.Println(string(marshaled))
 
 	resp, err := c.apiRequest("POST", "/payment/init", params)
 	if err != nil {

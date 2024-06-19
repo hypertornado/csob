@@ -3,7 +3,6 @@ package csob
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -14,8 +13,8 @@ var (
 	version        = "v1.9"
 	baseUrlTesting = "https://iapi.iplatebnibrana.csob.cz/api/" + version
 	baseUrl        = "https://api.platebnibrana.csob.cz/api/" + version
-	csobError      = errors.New("CSOB connection error")
-	Debug          = false
+	//csobError      = errors.New("CSOB connection error")
+	Debug = false
 )
 
 func (c *CSOB) baseUrl() string {
@@ -81,7 +80,7 @@ func (c *CSOB) paymentStatusTypePutCall(payId string, urlFragment string) error 
 	}
 
 	if resp.StatusCode != 200 {
-		return csobError
+		return fmt.Errorf("cant' put call, code: %d", resp.StatusCode)
 	}
 
 	return nil
@@ -109,14 +108,6 @@ func (c *CSOB) apiRequest(method, urlStr string, data map[string]interface{}) (r
 	req.Header.Add("Content-Type", "application/json")
 	resp, err = c.client.Do(req)
 
-	/*if Debug {
-		data, _ := ioutil.ReadAll(resp.Body)
-		fmt.Println(">>>")
-		fmt.Println(resp.Status)
-		fmt.Println(string(data))
-		fmt.Println("#####")
-	}*/
-
 	return
 }
 
@@ -124,7 +115,7 @@ func parseStatusResponse(response *http.Response) (*PaymentStatus, error) {
 	defer response.Body.Close()
 
 	if response.StatusCode != 200 {
-		return nil, csobError
+		return nil, fmt.Errorf("cant' parse status, code: %d", response.StatusCode)
 	}
 
 	respBytes, err := ioutil.ReadAll(response.Body)
