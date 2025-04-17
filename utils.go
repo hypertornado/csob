@@ -80,7 +80,7 @@ func (c *CSOB) paymentStatusTypePutCall(payId string, urlFragment string) error 
 	}
 
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("cant' put call, code: %d", resp.StatusCode)
+		return fmt.Errorf("CSOB cant' put call, code: %d", resp.StatusCode)
 	}
 
 	return nil
@@ -115,7 +115,7 @@ func parseStatusResponse(response *http.Response) (*PaymentStatus, error) {
 	defer response.Body.Close()
 
 	if response.StatusCode != 200 {
-		return nil, fmt.Errorf("cant' parse status, code: %d", response.StatusCode)
+		return nil, fmt.Errorf("CSOB cant' parse status, code: %d", response.StatusCode)
 	}
 
 	respBytes, err := ioutil.ReadAll(response.Body)
